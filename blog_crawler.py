@@ -24,6 +24,11 @@ from ipdb import set_trace
 
 from typing import Mapping, Sequence, Union
 
+from selenium.webdriver.support.wait import WebDriverWait
+
+def document_ready(driver):
+    return driver.execute_script("return document.readyState === 'complete';")
+
 
 # later goes to utils.py
 def strict_kw_click(keyword:str='',
@@ -121,13 +126,16 @@ def crawl_post( blog_df:pd.DataFrame,
         driver.get(url)
         # iframe 로드 될 때까지 기다려야함 explicit wait으로 구현 요함
         # 현재는 implicit wait
-        iframes = driver.find_elements(By.CSS_SELECTOR, 'iframe')
-        if iframes:
-            for f in iframes:
-                while not f.is_displayed():
-                    sleep(.1)
-        [print(f.get_dom_attribute('name')) for f in iframes]
-
+        # iframes = driver.find_elements(By.CSS_SELECTOR, 'iframe')
+        # if iframes:
+        #     for f in iframes:
+        #         while not f.is_displayed():
+        #             sleep(.1)
+        # [print(f.get_dom_attribute('name')) for f in iframes]
+        
+        
+        WebDriverWait(driver, timeout=10).until(document_ready)
+        
         fpref = url.replace('https://blog.naver.com/','')
         htmlf, txtf = f"{root}/{kw}/{fpref}.html", f"{root}/{kw}/{fpref}.txt"
         if not Path(htmlf).parent.is_dir():
