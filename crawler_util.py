@@ -7,9 +7,8 @@ explicit wait 해주어야 나중에 성능 팩터링하기에 용이할 것 (�
 퍼포먼스를 위해서 혹은 스케일업을 위해서는 selenium-grid라는 라이브러리가 있는 듯
 '''
 from selenium.webdriver.support.wait import WebDriverWait
-def document_initialised(driver):
-    return driver.execute_script("return initialised")
-# 내부 스크립트는 js만 된다.
+def document_ready(driver):
+    return driver.execute_script("return document.readyState === 'complete';")
 
 driver.navigate("file:///race_condition.html")
 WebDriverWait(driver, timeout=10).until(document_initialised)

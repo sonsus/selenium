@@ -9,24 +9,23 @@ get_post_url, crawl_post: selenium을 사용하는 이유인 explicit wait을 �
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
 
 
-from time import sleep
 from pathlib import Path
 
 from fire import Fire
 import pandas as pd
-from pprint import pprint
 from tqdm import tqdm
 from munch import Munch
+from typing import Mapping, Sequence, Union
 
 from ipdb import set_trace
 
+from crawler_util import *
 
-from typing import Mapping, Sequence, Union
 
 
-# later goes to utils.py
 def strict_kw_click(keyword:str='',
                     driver:webdriver.chrome.webdriver.WebDriver=None)->None:
     raise NotImplementedError
@@ -60,20 +59,20 @@ def get_post_url(
         # {keyword} 대신 {KW}를 검색했습니다. {keyword} 로 검색하기 <- 클릭
         strict_kw_click(keyword=keyword, driver=driver)
 
-    driver.find_element(By.LINK_TEXT, 'VIEW').click()
-    sleep(.5)
-    driver.find_element(By.LINK_TEXT, '블로그').click()
-    sleep(.5)
-    driver.find_element(By.LINK_TEXT, '옵션').click() # 검색옵션
-    # search_options = driver.find_elements(By.CSS_SELECTOR, '.option .txt') # 검색옵션
-    # search_options[10].click() # 3개월
-    sleep(.5)
-    driver.find_element(By.LINK_TEXT, '3개월').click()
+    b_view = driver.find_element(By.LINK_TEXT, 'VIEW')
+    wait_n_click(b_view, driver=driver, timeout=10)
+    b_blog = driver.find_element(By.LINK_TEXT, '블로그')
+    wait_n_click(b_blog, driver=driver, timeout=10)
+    b_opt = driver.find_element(By.LINK_TEXT, '옵션')
+    wait_n_click(b_opt, driver=driver, timeout=10)
+    b_3mo = driver.find_element(By.LINK_TEXT, '3개월')
+    wait_n_click(b_3mo, driver=driver, timeout=10)
+
 
     article_raw = driver.find_elements(By.CSS_SELECTOR, ".api_txt_lines.total_tit")
     while len(article_raw) < topk:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        sleep(1)
+        WebDriverWait(driver, timeout=10).until(document_ready)
         article_raw = driver.find_elements(By.CSS_SELECTOR, ".api_txt_lines.total_tit")
 
     article_raw_ = article_raw[:topk]
@@ -120,21 +119,15 @@ def crawl_post( blog_df:pd.DataFrame,
             url = 'https://blog.naver.com/simonson92/222961306602' # 테스트블로그 (모든 유형을 담으려 노력)
         print(url)
         driver.get(url)
-        # iframe 로드 될 때까지 기다려야함 explicit wait으로 구현 요함
-        # 현재는 implicit wait
-        iframes = driver.find_elements(By.CSS_SELECTOR, 'iframe')
-        if iframes:
-            for f in iframes:
-                while not f.is_displayed():
-                    sleep(.1)
-        [print(f.get_dom_attribute('name')) for f in iframes]
 
         fpref = url.replace('https://blog.naver.com/','')
         htmlf, txtf = f"{root}/{kw}/{fpref}.html", f"{root}/{kw}/{fpref}.txt"
         if not Path(htmlf).parent.is_dir():
             Path(htmlf).parent.mkdir(parents=True)
-            # 글의 iframe 접근
+
+        WebDriverWait(driver, timeout=10).until(document_ready)
         driver.switch_to.frame('mainFrame') # iframe 으로 들어가나보다
+
         content = driver.find_element(By.CLASS_NAME, 'se-main-container')
         textonly = content.text  # 텍스트만 뽑아오기
         outerhtml = content.get_attribute('outerHTML') # frame에 해당하는 html. 로딩 완료 후에 생기는 정적인 소스
