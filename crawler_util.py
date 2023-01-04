@@ -7,10 +7,17 @@ explicit wait 해주어야 나중에 성능 팩터링하기에 용이할 것 (�
 퍼포먼스를 위해서 혹은 스케일업을 위해서는 selenium-grid라는 라이브러리가 있는 듯
 '''
 from selenium.webdriver.support.wait import WebDriverWait
-def document_ready(driver):
-    return driver.execute_script("return document.readyState === 'complete';")
+from selenium.webdriver.support import expected_conditions as EC
 
-driver.navigate("file:///race_condition.html")
-WebDriverWait(driver, timeout=10).until(document_initialised)
-el = driver.find_element(By.TAG_NAME, "p")
-assert el.text == "Hello from JavaScript!"
+
+def condition_document_ready(driver):
+    return driver.execute_script("return document.readyState==='complete';")
+
+def wait_n_click(webelem, driver=None, timeout=10):
+    WebDriverWait(driver, timeout=timeout).until(EC.element_to_be_clickable(webelem))
+    webelem.click()
+    print(f"clicked {webelem}")
+
+def wait_n_switch2frame(framename:str, driver=None, timeout=10):
+    WebDriverWait(driver, timeout=timeout).until(EC.frame_to_be_available_and_switch_to_it(framename))
+    print(f'driver.switch_to.frame({framename})')

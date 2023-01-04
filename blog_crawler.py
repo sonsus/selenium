@@ -71,8 +71,9 @@ def get_post_url(
 
     article_raw = driver.find_elements(By.CSS_SELECTOR, ".api_txt_lines.total_tit")
     while len(article_raw) < topk:
+        print(f"블로그 포스트 {topk}개 되도록 스크롤 중")
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        WebDriverWait(driver, timeout=10).until(document_ready)
+        WebDriverWait(driver, timeout=10).until(condition_document_ready)
         article_raw = driver.find_elements(By.CSS_SELECTOR, ".api_txt_lines.total_tit")
 
     article_raw_ = article_raw[:topk]
@@ -118,6 +119,9 @@ def crawl_post( blog_df:pd.DataFrame,
             root = 'dbg/'
             url = 'https://blog.naver.com/simonson92/222961306602' # 테스트블로그 (모든 유형을 담으려 노력)
         print(url)
+        if not url.startswith('https://blog.naver.com/'):
+            print("skip: 이 url은 네이버 블로그는 아닌듯 해")
+            continue
         driver.get(url)
 
         fpref = url.replace('https://blog.naver.com/','')
@@ -125,9 +129,7 @@ def crawl_post( blog_df:pd.DataFrame,
         if not Path(htmlf).parent.is_dir():
             Path(htmlf).parent.mkdir(parents=True)
 
-        WebDriverWait(driver, timeout=10).until(document_ready)
-        driver.switch_to.frame('mainFrame') # iframe 으로 들어가나보다
-
+        wait_n_switch2frame('mainFrame', driver=driver, timeout=10)
         content = driver.find_element(By.CLASS_NAME, 'se-main-container')
         textonly = content.text  # 텍스트만 뽑아오기
         outerhtml = content.get_attribute('outerHTML') # frame에 해당하는 html. 로딩 완료 후에 생기는 정적인 소스
@@ -171,6 +173,7 @@ def post_crawl(
     csvs = Path(root).glob("**/*.csv")
 
     for csvf in csvs:
+        print(f"읽는 중: {csvf}")
         blog_df = pd.read_csv(csvf)
         crawl_post(blog_df, dbg=dbg)
 
@@ -182,6 +185,6 @@ if __name__ == '__main__':
 
     '''usage
     
-    python -m ipdb blog_crawler.py csv_crawl --keyword '서현역 맛집' --topk 150
+    python -m ipdb blog_crawler.py csv_crawl --keyword '맛집' --topk 150
     python -m ipdb blog_crawler.py post_crawl 
     '''
