@@ -21,3 +21,8 @@ def wait_n_click(webelem, driver=None, timeout=10):
 def wait_n_switch2frame(framename:str, driver=None, timeout=10):
     WebDriverWait(driver, timeout=timeout).until(EC.frame_to_be_available_and_switch_to_it(framename))
     print(f'driver.switch_to.frame({framename})')
+
+
+def change_ip(ip:str='', port:int='', chrome_opt=None):
+    proxy = f"{ip}:{port}"
+    chrome_opt.add_argument(f'--proxy-server={proxy}')

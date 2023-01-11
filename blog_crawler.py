@@ -10,6 +10,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium_stealth import stealth
+from time import sleep
 
 
 from pathlib import Path
@@ -31,12 +33,35 @@ def strict_kw_click(keyword:str='',
     raise NotImplementedError
 
 
-def init_driver()->webdriver.chrome.webdriver.WebDriver:
+def init_driver(
+        use_stealth:bool=False,
+        use_proxy:bool=False,
+            ip:str='',
+            port:int=8888, # for proxy
+)->webdriver.chrome.webdriver.WebDriver:
     options = webdriver.ChromeOptions()
-    options.add_argument('headless')
-    options.add_argument('window-size=1920x1080')
-    options.add_argument("disable-gpu")
+    options.add_argument("start-maximized")
+    options.add_argument("--headless")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    if use_proxy:
+        proxy = f"{ip}:{port}"
+        options.add_argument(f'--proxy-server={proxy}')
+
+
     driver = webdriver.Chrome(options = options)
+
+    if use_stealth: # https://2bmw3.tistory.com/31
+        stealth(driver,
+            languages=["ko-KR", "ko"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            # fix_hairline=True,
+            )
+
+
     return driver
 
 
@@ -46,8 +71,12 @@ def get_post_url(
         csvname:str='',
         root:str='results/',
         strict_kw:bool=False,
+            use_stealth:bool=False,
+            use_proxy:bool=False,
+                ip:str='',
+                port:int=8888,
 )->Mapping:
-    driver = init_driver()
+    driver = init_driver(use_stealth=use_stealth, use_proxy=use_proxy, ip=ip, port=port)
     driver.get("http://www.naver.com")
 
     # 검색창에 '검색어' 검색
@@ -97,7 +126,12 @@ def get_post_url(
 
 def crawl_post( blog_df:pd.DataFrame,
                 dbg:bool=False,
-                root:str='results/'):
+                root:str='results/',
+                    use_stealth:bool=False,
+                    use_proxy:bool=False,
+                        ip:str='',
+                        port:int=8888,
+                ):
     '''
     contents including iframe extraction:
         keyword/author_id/postno.html
@@ -112,7 +146,7 @@ def crawl_post( blog_df:pd.DataFrame,
     )
     results = Munch(results)
 
-    driver = init_driver()
+    driver = init_driver(use_stealth=use_stealth, use_proxy=use_proxy, ip=ip, port=port)
 
     for url, kw in tqdm(zip(results.urls, results.keywords), total=len(results.urls), desc='crawling over urls'):
         if dbg:
@@ -150,21 +184,33 @@ def csv_crawl(
         topk:int=10,
         csvname:str='',
         strict_kw:bool=False,
-        root:str='results/'
+        root:str='results/',
+                    use_stealth:bool=False,
+                    use_proxy:bool=False,
+                        ip:str='',
+                        port:int=8888,
 ):
     if not Path(root).is_dir():
         Path(root).mkdir()
-    driver = init_driver()
+    driver = init_driver(use_stealth=use_stealth, use_proxy=use_proxy, ip=ip, port=port)
     blog_df = get_post_url(keyword=keyword,
                            topk=topk,
                            csvname=csvname,
                            strict_kw=strict_kw,
+                        use_stealth=use_stealth,
+                        use_proxy=use_proxy,
+                        ip=ip,
+                        port=port
                            )
     print(blog_df)
 
 def post_crawl(
         root:str='results/',
         dbg:bool=False,
+                    use_stealth:bool=False,
+                    use_proxy:bool=False,
+                        ip:str='',
+                        port:int=8888,
 ):
 
     # 실질적으로는 위의 코드와 아래 코드는 분리되어야한다.
@@ -175,7 +221,11 @@ def post_crawl(
     for csvf in csvs:
         print(f"읽는 중: {csvf}")
         blog_df = pd.read_csv(csvf)
-        crawl_post(blog_df, dbg=dbg)
+        crawl_post(blog_df, dbg=dbg,
+                        use_stealth=use_stealth,
+                        use_proxy=use_proxy,
+                        ip=ip,
+                        port=port)
 
 
 
@@ -185,6 +235,6 @@ if __name__ == '__main__':
 
     '''usage
     
-    python -m ipdb blog_crawler.py csv_crawl --keyword '맛집' --topk 150
-    python -m ipdb blog_crawler.py post_crawl 
+    python -m ipdb blog_crawler.py csv_crawl --keyword '맛집' --topk 10 --use_stealth
+    python -m ipdb blog_crawler.py post_crawl --use_stealth
     '''
