@@ -40,10 +40,16 @@ def init_driver(
             port:int=8888, # for proxy
 )->webdriver.chrome.webdriver.WebDriver:
     options = webdriver.ChromeOptions()
-    options.add_argument("start-maximized")
-    options.add_argument("--headless")
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
+    if use_stealth: 
+        options.add_argument("start-maximized")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+    else:
+        options.add_argument("headless")
+        options.add_argument('window-size=1920x1080')
+        options.add_argument("disable-gpu")
+    
+    
     if use_proxy:
         proxy = f"{ip}:{port}"
         options.add_argument(f'--proxy-server={proxy}')
